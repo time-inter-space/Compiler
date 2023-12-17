@@ -28,7 +28,7 @@ public class Main {
         //String name = "test.mx";
         //InputStream input = new FileInputStream(name);
 
-        //try {
+        try {
             RootNode ASTRoot;
             globalScope gScope = new globalScope(null, null);
             gScope.gScope = gScope;
@@ -53,9 +53,9 @@ public class Main {
             //new InstSelector(asmF).visitFn(f);
             //new RegAlloc(asmF).work();
             //new AsmPrinter(asmF, System.out).print();
-        /*} catch (error er) {
+        } catch (error er) {
             System.err.println(er.toString());
-            throw new RuntimeException();
-        }*/
+            //throw new RuntimeException();
+        }
     }
 }
