@@ -1,0 +1,3 @@
+#!/bin/bash
+
+java -cp "src/antlr-4.13.0-complete.jar:$(dirname $0)" Main $@
