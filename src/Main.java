@@ -29,7 +29,7 @@ public class Main {
         //InputStream input = new FileInputStream(name);
 
         try {
-            RootNode ASTRoot;
+            /*RootNode ASTRoot;
             globalScope gScope = new globalScope(null, null);
             gScope.gScope = gScope;
 
@@ -43,7 +43,7 @@ public class Main {
             ASTBuilder astBuilder = new ASTBuilder(gScope);
             ASTRoot = (RootNode)astBuilder.visit(parseTreeRoot);
             new SymbolCollector(gScope).visit(ASTRoot);
-            new SemanticChecker(gScope).visit(ASTRoot);
+            new SemanticChecker(gScope).visit(ASTRoot);*/
 
             //mainFn f = new mainFn();
             //new IRBuilder(f, gScope).visit(ASTRoot);
