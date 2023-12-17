@@ -28,8 +28,8 @@ public class Main {
         //String name = "test.mx";
         //InputStream input = new FileInputStream(name);
 
-        try {
-            /*RootNode ASTRoot;
+        /*try {
+            RootNode ASTRoot;
             globalScope gScope = new globalScope(null, null);
             gScope.gScope = gScope;
 
@@ -43,7 +43,7 @@ public class Main {
             ASTBuilder astBuilder = new ASTBuilder(gScope);
             ASTRoot = (RootNode)astBuilder.visit(parseTreeRoot);
             new SymbolCollector(gScope).visit(ASTRoot);
-            new SemanticChecker(gScope).visit(ASTRoot);*/
+            new SemanticChecker(gScope).visit(ASTRoot);
 
             //mainFn f = new mainFn();
             //new IRBuilder(f, gScope).visit(ASTRoot);
@@ -55,7 +55,8 @@ public class Main {
             //new AsmPrinter(asmF, System.out).print();
         } catch (error er) {
             System.err.println(er.toString());
-            //throw new RuntimeException();
-        }
+            throw new RuntimeException();
+        }*/
+        while (true);
     }
 }
