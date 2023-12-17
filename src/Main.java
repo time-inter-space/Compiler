@@ -27,15 +27,8 @@ public class Main {
 
         //String name = "test.mx";
         //InputStream input = new FileInputStream(name);
-        /*
-         * basic-47,60
-         * class-12,16
-         * misc-19,37
-         * scope-2,3,8
-         * ternary-expression-1,4,5
-         */
 
-        try {
+        //try {
             RootNode ASTRoot;
             globalScope gScope = new globalScope(null, null);
             gScope.gScope = gScope;
@@ -60,9 +53,9 @@ public class Main {
             //new InstSelector(asmF).visitFn(f);
             //new RegAlloc(asmF).work();
             //new AsmPrinter(asmF, System.out).print();
-        } catch (error er) {
+        /*} catch (error er) {
             System.err.println(er.toString());
             throw new RuntimeException();
-        }
+        }*/
     }
 }
