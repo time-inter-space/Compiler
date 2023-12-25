@@ -2,12 +2,14 @@ package Util;
 
 import Util.error.semanticError;
 import AST.*;
+import MIR.*;
 
 import java.util.HashMap;
 
 public class globalScope extends Scope {
     public HashMap<String, Type> types = new HashMap<>();
     public HashMap<String, FnDefNode> fns = new HashMap<>();
+    public HashMap<String, classDef> irTypes = new HashMap<>();
     public globalScope(Scope parentScope, globalScope gScope) {
         super(parentScope, gScope);
         types.put("int", new Type("int"));
@@ -89,5 +91,9 @@ public class globalScope extends Scope {
     public FnDefNode getFnFromName(String name, position pos) {
         if (fns.containsKey(name)) return fns.get(name);
         throw new semanticError("no such function: " + name, pos);
+    }
+
+    public classDef getIRClass(String type) {
+        return irTypes.get(type);
     }
 }

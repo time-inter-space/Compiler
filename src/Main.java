@@ -1,11 +1,12 @@
 import AST.RootNode;
 //import Assembly.AsmFn;
-//import Backend.*;
+import Backend.*;
 import Frontend.ASTBuilder;
 import Frontend.SemanticChecker;
 import Frontend.SymbolCollector;
-//import MIR.block;
-//import MIR.mainFn;
+import MIR.block;
+import MIR.root;
+import MIR.function;
 import parser.MxLexer;
 import parser.MxParser;
 import Util.MxErrorListener;
@@ -24,10 +25,6 @@ import java.io.InputStream;
 
 public class Main {
     public static void main(String[] args) throws Exception{
-
-        //String name = "test.mx";
-        //InputStream input = new FileInputStream(name);
-
         try {
             RootNode ASTRoot;
             globalScope gScope = new globalScope(null, null);
@@ -45,14 +42,18 @@ public class Main {
             new SymbolCollector(gScope).visit(ASTRoot);
             new SemanticChecker(gScope).visit(ASTRoot);
 
-            //mainFn f = new mainFn();
-            //new IRBuilder(f, gScope).visit(ASTRoot);
-            // new IRPrinter(System.out).visitFn(f);
+            root irProgram = new root();
+            function init = new function(gScope.getTypeFromName("void", null), 
+                           null, "_init");
+            init.blocks.add(new block(0));
+            irProgram.fns.add(init);
+            new IRBuilder(irProgram, init, gScope).visit(ASTRoot);
+            irProgram.print(System.out);
 
-            //AsmFn asmF = new AsmFn();
-            //new InstSelector(asmF).visitFn(f);
-            //new RegAlloc(asmF).work();
-            //new AsmPrinter(asmF, System.out).print();
+            // AsmFn asmF = new AsmFn();
+            // new InstSelector(asmF).visitFn(f);
+            // new RegAlloc(asmF).work();
+            // new AsmPrinter(asmF, System.out).print();
         } catch (error er) {
             System.err.println(er.toString());
             throw new RuntimeException();

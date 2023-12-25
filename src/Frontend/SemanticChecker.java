@@ -209,7 +209,7 @@ public class SemanticChecker implements ASTVisitor {
         else if (it.fn.fnName.equals("size") && it.obj.type.dim > 0) {
             if (it.fn.params.size() > 0)
                 throw new semanticError("number of parameters not match", it.fn.pos);
-            it.type = new Type(gScope.getTypeFromName("int", it.fn.pos));
+            it.type = it.fn.type = new Type(gScope.getTypeFromName("int", it.fn.pos));
         }
         else {
             if (it.obj.type.dim > 0 || !type.memberFns.containsKey(it.fn.fnName))
@@ -223,7 +223,7 @@ public class SemanticChecker implements ASTVisitor {
                 if (!expr.type.equals(new Type(fn.params.get(i).type)))
                     throw new semanticError("parameter type not match", expr.pos);
             }
-            it.type = new Type(gScope.getTypeFromName(fn.type, fn.pos));
+            it.type = it.fn.type = new Type(gScope.getTypeFromName(fn.type, fn.pos));
         }
     }
 
@@ -340,12 +340,6 @@ public class SemanticChecker implements ASTVisitor {
     @Override public void visit(ParenExprNode it) {
         it.expr.accept(this);
         it.type = new Type(it.expr.type);
-    }
-
-    @Override public void visit(CommaExprNode it) {
-        it.expr1.accept(this);
-        it.expr2.accept(this);
-        it.type = new Type(it.expr2.type);
     }
 
     @Override public void visit(TernaryExprNode it) {

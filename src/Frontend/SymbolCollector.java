@@ -50,7 +50,6 @@ public class SymbolCollector implements ASTVisitor {
     @Override public void visit(PreExprNode it) {}
     @Override public void visit(PostExprNode it) {}
     @Override public void visit(ParenExprNode it) {}
-    @Override public void visit(CommaExprNode it) {}
     @Override public void visit(TernaryExprNode it) {}
     @Override public void visit(AssignExprNode it) {}
     @Override public void visit(NewArrayExprNode it) {}

@@ -1,20 +1,19 @@
 package Util;
 
-//import MIR.register;
+import MIR.Entity.*;
 import Util.error.semanticError;
 
 import java.util.HashMap;
 
 public class Scope {
 
-    public HashMap<String, Type> members;
-    //public HashMap<String, register> entities = new HashMap<>();
+    public HashMap<String, Type> members = new HashMap<>();
+    public HashMap<String, variable> entities = new HashMap<>();
     private Scope parentScope;
     public globalScope gScope;
-
+    public boolean isClass = false;
 
     public Scope(Scope parentScope, globalScope gScope) {
-        members = new HashMap<>();
         this.parentScope = parentScope;
         this.gScope = gScope;
     }
@@ -28,7 +27,6 @@ public class Scope {
             throw new semanticError("Semantic Error: variable redefine", pos);
         members.put(name, t);
     }
-
     public boolean containsVariable(String name, boolean lookUpon) {
         if (members.containsKey(name)) return true;
         else if (parentScope != null && lookUpon)
@@ -41,10 +39,13 @@ public class Scope {
             return parentScope.getType(name, true, pos);
         throw new semanticError("no such variable: " + name, pos);
     }
-    /*public register getEntity(String name, boolean lookUpon) {
-        if (entities.containsKey(name)) return entities.get(name);
+    public variable getEntity(String name, boolean lookUpon) {
+        if (entities.containsKey(name)) {
+            if (isClass) return null;
+            return entities.get(name);
+        }
         else if (parentScope != null && lookUpon)
             return parentScope.getEntity(name, true);
         return null;
-    }*/
+    }
 }

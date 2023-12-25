@@ -36,12 +36,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         return rt;
     }
 
-    /*@Override public ASTNode visitMainFn(MxParser.MainFnContext ctx) {
-        FnDefNode fn = new FnDefNode(new position(ctx), "int", "main");
-        ctx.suite().statement().forEach(stmt -> fn.stmts.add((StmtNode)visit(stmt)));
-        return fn;
-    }*/
-
     @Override public ASTNode visitClassDef(MxParser.ClassDefContext ctx) {
         ClassDefNode classDef = new ClassDefNode(new position(ctx), ctx.Identifier().getText());
         ctx.varDef().forEach(vd -> classDef.varDefs.add((VarDefStmtNode)visit(vd)));
@@ -233,14 +227,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
     @Override public ASTNode visitFunctionExpr(MxParser.FunctionExprContext ctx) {
         return visitFuncExpr(ctx.funcExpr());
     }
-
-    /*@Override public ASTNode visitCommaExpr(MxParser.CommaExprContext ctx) {
-        return new CommaExprNode(
-            new position(ctx),
-            (ExprNode)visit(ctx.expression(0)),
-            (ExprNode)visit(ctx.expression(1))
-        );
-    }*/
 
     @Override public ASTNode visitTernaryExpr(MxParser.TernaryExprContext ctx) {
         return new TernaryExprNode(

@@ -54,7 +54,8 @@ expression
     | expression '|' expression                            #binaryExpr
     | expression '&&' expression                           #binaryExpr
     | expression '||' expression                           #binaryExpr
-    | <assoc = right> expression '?' expression ':' expression             #ternaryExpr
+    | <assoc = right> expression '?'
+        expression ':' expression                          #ternaryExpr
     | <assoc = right> expression '=' expression            #assignExpr
     ;
 

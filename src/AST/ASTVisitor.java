@@ -23,7 +23,6 @@ public interface ASTVisitor {
     void visit(PreExprNode it);
     void visit(PostExprNode it);
     void visit(ParenExprNode it);
-    void visit(CommaExprNode it);
     void visit(TernaryExprNode it);
     void visit(AssignExprNode it);
     void visit(NewArrayExprNode it);

@@ -47,4 +47,7 @@ public class Type {
     public boolean primitive() {
         return dim <= 0 && (name.equals("int") || name.equals("bool"));
     }
+    public boolean isVoid() {
+        return name.equals("") || name.equals("void");
+    }
 }
