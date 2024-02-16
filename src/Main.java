@@ -22,6 +22,9 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import java.io.FileInputStream;
 import java.io.InputStream;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws Exception{
@@ -45,7 +48,6 @@ public class Main {
             root irProgram = new root();
             function init = new function(gScope.getTypeFromName("void", null), 
                            null, "_init");
-            init.blocks.add(new block(0));
             irProgram.fns.add(init);
             new IRBuilder(irProgram, init, gScope).visit(ASTRoot);
             irProgram.print(System.out);

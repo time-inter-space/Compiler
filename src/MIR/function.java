@@ -17,7 +17,7 @@ public class function {
         else this.fnName = "@" + currentClass.className + "." + fnName;
     }
     public void print(PrintStream out) {
-        out.print("define ");
+        out.print("define dso_local ");
         type.print(out);
         out.print(" " + fnName + "(");
         for (int i = 0; i < params.size(); i++) {
@@ -25,6 +25,8 @@ public class function {
             params.get(i).printWithType(out);
         }
         out.println(") {");
+        for (int i = 0; i < blocks.size(); i++)
+            blocks.get(i).label = String.valueOf(i);
         blocks.forEach(block -> block.print(out));
         out.println("}");
     }

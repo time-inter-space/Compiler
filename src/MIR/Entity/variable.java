@@ -6,7 +6,7 @@ import java.io.PrintStream;
 
 import MIR.*;
 
-public class variable extends entity {
+public abstract class variable extends entity {
     public String name;
     public variable(Type type, String name) {
         this.type = new IRType(type);

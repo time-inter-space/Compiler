@@ -15,7 +15,7 @@ public class ret extends terminalStmt {
     @Override public void print(PrintStream out) {
         out.print("ret ");
         type.print(out);
-        if (val != null) {
+        if (!type.name.equals("void")) {
             out.print(" ");
             val.print(out);
         }

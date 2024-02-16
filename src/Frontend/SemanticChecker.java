@@ -82,6 +82,7 @@ public class SemanticChecker implements ASTVisitor {
         FnDefNode fn = null;
         if (currentClass != null) fn = currentClass.memberFns.get(it.fnName);
         if (fn == null) fn = gScope.getFnFromName(it.fnName, it.pos);
+        else it.inClass = true;
         it.type = new Type(gScope.getTypeFromName(fn.type, fn.pos));
         if (fn.params.size() != it.params.size())
             throw new semanticError("number of parameters not match", it.pos);

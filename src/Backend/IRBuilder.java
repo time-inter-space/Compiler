@@ -19,10 +19,10 @@ public class IRBuilder implements ASTVisitor {
     private classDef currentClass = null;
     private Type currentClassType = null;
     private function currentFn = null;
-    private ExprNode dotObj = null;
+    private ExprNode currentObj = null;
     private Stack<block> afterLoopBlock = new Stack<>();
     private Stack<block> nextLoopBlock = new Stack<>();
-    private int regCnt = 1, strConstCnt = 0;
+    private int regCnt = 0, strConstCnt = 0;
     private HashMap<String, Integer> varCnt = new HashMap<>();
 
     private int getVarCnt(String name) {
@@ -40,16 +40,16 @@ public class IRBuilder implements ASTVisitor {
         this.init = init;
         currentScope = gScope;
         this.gScope = gScope;
-        currentBlock = new block(regCnt++);
     }
 
     @Override public void visit(RootNode it) {
+        it.classDefs.forEach(cd -> gScope.irTypes.put(cd.className, new classDef(cd.className)));
         it.classDefs.forEach(cd -> cd.accept(this));
         currentFn = init;
+        currentBlock = new block();
         it.varDefs.forEach(vd -> vd.accept(this));
         currentBlock.push_back(new ret(init.type, new voidConst()));
         init.blocks.add(currentBlock);
-        currentBlock = new block(regCnt++);
         currentFn = null;
         it.fnDefs.forEach(fd -> fd.accept(this));
         it.mainFn.accept(this);
@@ -59,12 +59,21 @@ public class IRBuilder implements ASTVisitor {
         currentScope = new Scope(currentScope, gScope);
         currentFn = new function(gScope.getTypeFromName(it.type, null),
                                  currentClass, it.fnName);
+        currentBlock = new block();
         if (currentClass != null) {
-            variable var = new variable(currentClassType, "this." + getVarCnt("this"));
+            localVar var = new localVar(currentClassType, "this." + getVarCnt("this"));
             currentScope.entities.put("this", var);
             currentFn.params.add(var);
+            AtomExprNode thisExpr = new AtomExprNode(null);
+            thisExpr.isThis = true;
+            thisExpr.type = currentClassType;
+            thisExpr.val = var;
+            currentObj = thisExpr;
         }
         it.params.forEach(param -> param.accept(this));
+        FnExprNode initFn = new FnExprNode(null, "_init");
+        initFn.type = new Type("void");
+        if (it.fnName.equals("main")) currentBlock.stmts.push(new call(null, null, initFn));
         for (StmtNode stmt : it.stmts)
             if (stmt != null) stmt.accept(this);
         IRType type = currentFn.type;
@@ -75,18 +84,21 @@ public class IRBuilder implements ASTVisitor {
         else currentBlock.push_back(new ret(type, new nullConst()));
         currentFn.blocks.add(currentBlock);
         rt.fns.add(currentFn);
-        currentBlock = new block(regCnt++);
         currentFn = null;
+        currentObj = null;
         currentScope = currentScope.parentScope();
     }
 
     @Override public void visit(ClassDefNode it) {
         currentScope = new Scope(currentScope, gScope);
         currentScope.isClass = true;
-        currentClass = new classDef(it.className);
+        currentClass = gScope.getIRClass(it.className);
         currentClassType = gScope.getTypeFromName(it.className, null);
-        gScope.irTypes.put(it.className, currentClass);
         it.varDefs.forEach(vd -> vd.accept(this));
+        if (it.constructor != null) {
+            it.constructor.type = "void";
+            it.constructor.accept(this);
+        }
         it.fns.forEach(f -> f.accept(this));
         rt.cls.add(currentClass);
         currentClass = null;
@@ -96,10 +108,13 @@ public class IRBuilder implements ASTVisitor {
 
     @Override public void visit(ParamNode it) {
         String name = it.varName;
-        variable var = new variable(
-            gScope.getTypeFromName(it.type, null), name + '.' + getVarCnt(name));
-        currentScope.entities.put(name, var);
+        Type type = gScope.getTypeFromName(it.type, null);
+        localVar var = new localVar(type, name + '.' + getVarCnt(name));
         currentFn.params.add(var);
+        localVar tmpVar = new localVar(type, name + '.' + getVarCnt(name));
+        currentBlock.push_back(new alloca(tmpVar));
+        currentBlock.push_back(new store(type, tmpVar, var));
+        currentScope.entities.put(name, tmpVar);
     }
 
     @Override public void visit(FnExprNode it) {
@@ -108,11 +123,13 @@ public class IRBuilder implements ASTVisitor {
         if (it.type.isVoid()) reg = null;
         else reg = new register(it.type, regCnt++);
         it.val = reg;
+        ExprNode dotObj = null;
+        if (it.inClass) dotObj = currentObj;
         currentBlock.push_back(new call(reg, dotObj, it));
     }
 
     @Override public void visit(VarDefStmtNode it) {
-        Type type = gScope.getTypeFromName(it.type, null);
+        Type type = new Type(it.type);
         for (int i = 0; i < it.vars.size(); i++) {
             String name = it.vars.get(i);
             ExprNode expr = it.vals.get(i);
@@ -122,7 +139,7 @@ public class IRBuilder implements ASTVisitor {
                 currentBlock.push_back(new alloca(var));
                 if (expr != null) {
                     expr.accept(this);
-                    currentBlock.load_store(type, var, expr.val, regCnt++);
+                    currentBlock.push_back(new store(type, var, expr.val));
                 }
             }
             else if (currentClass != null) currentClass.addVar(type, name);
@@ -131,7 +148,7 @@ public class IRBuilder implements ASTVisitor {
                 gScope.entities.put(name, var);
                 if (expr != null) {
                     expr.accept(this);
-                    currentBlock.load_store(type, var, expr.val, regCnt++);
+                    currentBlock.push_back(new store(type, var, expr.val));
                 }
                 rt.vars.add(var);
             }
@@ -147,8 +164,8 @@ public class IRBuilder implements ASTVisitor {
 
     @Override public void visit(IfStmtNode it) {
         it.condition.accept(this);
-        block trueBlock = new block(regCnt++), falseBlock = new block(regCnt++);
-        block destination = new block(regCnt++);
+        block trueBlock = new block(), falseBlock = new block();
+        block destination = new block();
         currentBlock.push_back(new br(it.condition.val, trueBlock, falseBlock));
         currentFn.blocks.add(currentBlock);
 
@@ -174,13 +191,13 @@ public class IRBuilder implements ASTVisitor {
     }
 
     @Override public void visit(WhileStmtNode it) {
-        block conditionBlock = new block(regCnt++);
+        block conditionBlock = new block();
         currentBlock.push_back(new jump(conditionBlock));
         currentFn.blocks.add(currentBlock);
         
         currentBlock = conditionBlock;
         it.condition.accept(this);
-        block whileBlock = new block(regCnt++), destination = new block(regCnt++);
+        block whileBlock = new block(), destination = new block();
         currentBlock.push_back(new br(it.condition.val, whileBlock, destination));
         currentFn.blocks.add(currentBlock);
         
@@ -202,12 +219,12 @@ public class IRBuilder implements ASTVisitor {
 
     @Override public void visit(ForStmtNode it) {
         if (it.init != null) it.init.accept(this);
-        block conditionBlock = new block(regCnt++);
+        block conditionBlock = new block();
         currentBlock.push_back(new jump(conditionBlock));
         currentFn.blocks.add(currentBlock);
 
         currentBlock = conditionBlock;
-        block forBlock = new block(regCnt++), destination = new block(regCnt++);
+        block forBlock = new block(), destination = new block();
         if (it.cond != null) {
             it.cond.accept(this);
             currentBlock.push_back(new br(it.cond.val, forBlock, destination));
@@ -215,7 +232,7 @@ public class IRBuilder implements ASTVisitor {
         else currentBlock.push_back(new jump(forBlock));
         currentFn.blocks.add(currentBlock);
 
-        block stepBlock = new block(regCnt++);
+        block stepBlock = new block();
         currentBlock = stepBlock;
         if (it.step != null) it.step.accept(this);
         currentBlock.push_back(new jump(conditionBlock));
@@ -232,7 +249,7 @@ public class IRBuilder implements ASTVisitor {
         afterLoopBlock.pop();
         nextLoopBlock.add(stepBlock);
         currentBlock.push_back(new jump(stepBlock));
-        currentFn.blocks.add(conditionBlock);
+        currentFn.blocks.add(currentBlock);
 
         currentBlock = destination;
     }
@@ -245,19 +262,19 @@ public class IRBuilder implements ASTVisitor {
         else currentBlock.push_back(new ret(
             new IRType(gScope.getTypeFromName("void", null)), new voidConst()));
         currentFn.blocks.add(currentBlock);
-        currentBlock = new block(regCnt++);
+        currentBlock = new block();
     }
 
     @Override public void visit(BreakStmtNode it) {
         currentBlock.push_back(new jump(afterLoopBlock.peek()));
         currentFn.blocks.add(currentBlock);
-        currentBlock = new block(regCnt++);
+        currentBlock = new block();
     }
 
     @Override public void visit(ContinueStmtNode it) {
         currentBlock.push_back(new jump(nextLoopBlock.peek()));
         currentFn.blocks.add(currentBlock);
-        currentBlock = new block(regCnt++);
+        currentBlock = new block();
     }
 
     @Override public void visit(ExprStmtNode it) {
@@ -270,25 +287,24 @@ public class IRBuilder implements ASTVisitor {
             register ptr = new register(it.type, regCnt++);
             intConst num = new intConst(String.valueOf(
                 gScope.getIRClass(it.obj.type.name).varNum.get(it.var)));
-            currentBlock.push_back(new getelementptr(ptr, it.obj.type, it.obj.val, num));
+            currentBlock.push_back(new getelementptr(ptr, it.obj.type, it.obj.val, num, true));
             it.addr = ptr;
             register reg = new register(it.type, regCnt++);
             currentBlock.push_back(new load(it.type, ptr, reg));
             it.val = reg;
         }
         else if (it.fn.fnName.equals("size") && it.obj.type.dim > 0) {
-            dotObj = it.obj;
-            FnExprNode fn = new FnExprNode(null, "size");
-            fn.type = gScope.getTypeFromName("int", null);
-            fn.accept(this);
-            it.val = fn.val;
-            dotObj = it.obj;
+            register reg = new register(it.fn.type, regCnt++);
+            it.val = it.fn.val = reg;
+            currentBlock.push_back(new call(reg, it.obj, it.fn));
         }
         else {
-            dotObj = it.obj;
-            it.fn.accept(this);
-            it.val = it.fn.val;
-            dotObj = null;
+            it.fn.params.forEach(expr -> expr.accept(this));
+            register reg;
+            if (it.type.isVoid()) reg = null;
+            else reg = new register(it.type, regCnt++);
+            it.val = it.fn.val = reg;
+            currentBlock.push_back(new call(reg, it.obj, it.fn));
         }
     }
     
@@ -296,7 +312,7 @@ public class IRBuilder implements ASTVisitor {
         it.obj.accept(this);
         it.id.accept(this);
         register ptr = new register(it.type, regCnt++);
-        currentBlock.push_back(new getelementptr(ptr, it.obj.type, it.obj.val, it.id.val));
+        currentBlock.push_back(new getelementptr(ptr, it.obj.type, it.obj.val, it.id.val, false));
         it.addr = ptr;
         register reg = new register(it.type, regCnt++);
         currentBlock.push_back(new load(it.type, ptr, reg));
@@ -306,7 +322,19 @@ public class IRBuilder implements ASTVisitor {
     @Override public void visit(NewClassExprNode it) {
         register reg = new register(it.type, regCnt++);
         it.val = reg;
-        currentBlock.push_back(new alloca(reg));
+        FnExprNode expr = new FnExprNode(null, "builtin.new.var");
+        expr.type = new Type(it.type);
+        String irSize = Integer.toString(gScope.irSizes.get(it.typeName));
+        AtomExprNode atomExpr = new AtomExprNode(null);
+        atomExpr.num = irSize;
+        atomExpr.val = new intConst(irSize);
+        expr.params.add(atomExpr);
+        currentBlock.push_back(new call(reg, null, expr));
+        if (it.type.hasConstructor) {
+            FnExprNode _expr = new FnExprNode(null, it.typeName);
+            _expr.type = new Type("void");
+            currentBlock.push_back(new call(null, it, _expr));
+        }
     }
 
     @Override public void visit(AtomExprNode it) {
@@ -318,7 +346,7 @@ public class IRBuilder implements ASTVisitor {
                 intConst num = new intConst(String.valueOf(
                     currentClass.varNum.get(it.iden)));
                 currentBlock.push_back(new getelementptr(
-                    reg, currentClassType, obj, num));
+                    reg, currentClassType, obj, num, true));
                 it.addr = reg;
             }
             register reg = new register(it.type, regCnt++);
@@ -329,9 +357,7 @@ public class IRBuilder implements ASTVisitor {
         else if (it.str != null) {
             globalVar strConst = new globalVar(it.type, it.str, strConstCnt++);
             rt.vars.add(strConst);
-            register reg = new register(it.type, regCnt++);
-            it.val = reg;
-            currentBlock.push_back(new load(it.type, strConst, reg));
+            it.val = strConst;
         }
         else if (it.isTrue) it.val = new intConst("1");
         else if (it.isFalse) it.val = new intConst("0");
@@ -343,7 +369,7 @@ public class IRBuilder implements ASTVisitor {
         Type strType = gScope.getTypeFromName("string", null);
         if (it.op == BinaryExprNode.Operator.ANDAND
          || it.op == BinaryExprNode.Operator.OROR) {
-            block block2 = new block(regCnt++), destination = new block(regCnt++);
+            block block2 = new block(), destination = new block();
             it.expr1.accept(this);
             entity cond = it.expr1.val;
             if (it.op == BinaryExprNode.Operator.OROR) {
@@ -367,7 +393,7 @@ public class IRBuilder implements ASTVisitor {
             it.val = reg;
             currentBlock.push_back(new binary(it.type, reg, it.expr1.val, it.expr2.val, op));
         }
-        else if (it.type.equals(strType)) {
+        else if (it.expr1.type.equals(strType)) {
             it.expr1.accept(this);
             it.expr2.accept(this);
             register reg = new register(it.type, regCnt++);
@@ -398,10 +424,10 @@ public class IRBuilder implements ASTVisitor {
             String op;
             if (it.op == BinaryExprNode.Operator.EQ) op = "eq";
             else if (it.op == BinaryExprNode.Operator.NEQ) op = "ne";
-            else if (it.op == BinaryExprNode.Operator.L) op = "lt";
-            else if (it.op == BinaryExprNode.Operator.LEQ) op = "le";
-            else if (it.op == BinaryExprNode.Operator.G) op = "gt";
-            else op = "ge";
+            else if (it.op == BinaryExprNode.Operator.L) op = "slt";
+            else if (it.op == BinaryExprNode.Operator.LEQ) op = "sle";
+            else if (it.op == BinaryExprNode.Operator.G) op = "sgt";
+            else op = "sge";
             currentBlock.push_back(new icmp(it.expr1.type, reg, it.expr1.val, it.expr2.val, op));
         }
         else {
@@ -431,12 +457,11 @@ public class IRBuilder implements ASTVisitor {
             it.addr = it.expr.addr;
             register reg = new register(it.type, regCnt++);
             it.val = reg;
-            currentBlock.push_back(new load(it.type, it.expr.addr, reg));
             String op;
             if (it.op == PreExprNode.Operator.PP) op = "add";
             else op = "sub";
             currentBlock.push_back(new binary(
-                it.type, reg, reg, new intConst("1"), op));
+                it.type, reg, it.expr.val, new intConst("1"), op));
             currentBlock.push_back(new store(it.type, it.addr, reg));
         }
         else {
@@ -455,14 +480,14 @@ public class IRBuilder implements ASTVisitor {
 
     @Override public void visit(PostExprNode it) {
         it.expr.accept(this);
+        it.val = it.expr.val;
         register reg = new register(it.type, regCnt++);
-        it.val = reg;
-        currentBlock.push_back(new load(it.type, it.expr.addr, reg));
         String op;
         if (it.op == PostExprNode.Operator.PP) op = "add";
         else op = "sub";
         currentBlock.push_back(new binary(
-            it.type, reg, reg, new intConst("1"), op));
+            it.type, reg, it.expr.val, new intConst("1"), op));
+        currentBlock.push_back(new store(it.type, it.expr.addr, reg));
     }
 
     @Override public void visit(ParenExprNode it) {
@@ -473,8 +498,8 @@ public class IRBuilder implements ASTVisitor {
 
     @Override public void visit(TernaryExprNode it) {
         it.expr1.accept(this);
-        block block2 = new block(regCnt++), block3 = new block(regCnt++);
-        block destination = new block(regCnt++);
+        block block2 = new block(), block3 = new block();
+        block destination = new block();
         currentBlock.push_back(new br(it.expr1.val, block2, block3));
         currentFn.blocks.add(currentBlock);
 
@@ -508,63 +533,68 @@ public class IRBuilder implements ASTVisitor {
     void newExprInit(NewArrayExprNode it, int id, block destination, register ptr) {
         Type type = new Type(it.type);
         type.dim = it.sizes.size() - id - 1;
-        if (type.dim <= 0) {
-            if (it.typeName.equals("int") || it.type.name.equals("bool"))
-                currentBlock.push_back(new store(type, ptr, new intConst("0")));
-            else currentBlock.push_back(new store(type, ptr, new nullConst()));
-            currentBlock.push_back(new jump(destination));
-            currentFn.blocks.add(currentBlock);
-            return;
-        }
         ExprNode expr = it.sizes.get(id);
-        if (expr == null) {
-            currentBlock.push_back(new store(type, ptr, new nullConst()));
-            currentBlock.push_back(new jump(destination));
-            currentFn.blocks.add(currentBlock);
-            return;
-        }
-        register reg = new register(expr.type, regCnt++);
-        currentBlock.push_back(new load(expr.type, expr.addr, reg));
-        block condBlock = new block(regCnt++), loopBlock = new block(regCnt++);
+        localVar var = new localVar(expr.type, "i." + getVarCnt("i"));
+        currentBlock.push_back(new alloca(var));
+        currentBlock.push_back(new store(expr.type, var, expr.val));
+        block condBlock = new block(), loopBlock = new block();
         currentBlock.push_back(new jump(condBlock));
         currentFn.blocks.add(currentBlock);
 
         currentBlock = condBlock;
         Type boolType = gScope.getTypeFromName("bool", null);
         register cond = new register(boolType, regCnt++);
+        register reg = new register(expr.type, regCnt++);
+        currentBlock.push_back(new load(expr.type, var, reg));
         currentBlock.push_back(new icmp(
             expr.type, cond, reg, new intConst("0"), "sgt"));
         currentBlock.push_back(new br(cond, loopBlock, destination));
         currentFn.blocks.add(currentBlock);
 
         currentBlock = loopBlock;
+        register reg1 = new register(expr.type, regCnt++);
+        register reg2 = new register(expr.type, regCnt++);
+        currentBlock.push_back(new load(expr.type, var, reg1));
         currentBlock.push_back(new binary(
-            expr.type, reg, reg, new intConst("1"), "sub"));
+            expr.type, reg2, reg1, new intConst("1"), "sub"));
+        currentBlock.push_back(new store(expr.type, var, reg2));
         register subPtr = new register(type, regCnt++);
         type.dim++;
-        currentBlock.push_back(new getelementptr(subPtr, type, ptr, reg));
-        block initBlock = new block(regCnt++);
-        currentBlock.push_back(new jump(initBlock));
-        currentFn.blocks.add(currentBlock);
+        currentBlock.push_back(new getelementptr(subPtr, type, ptr, reg2, false));
+        if (id + 1 < it.sizes.size() && it.sizes.get(id + 1) != null) {
+            FnExprNode _expr = new FnExprNode(null, "builtin.new.array");
+            _expr.params.add(it.sizes.get(id + 1));
+            _expr.type = new Type(it.type);
+            _expr.type.dim -= id + 1;
+            register _reg = new register(_expr.type, regCnt++);
+            currentBlock.push_back(new call(_reg, null, _expr));
+            currentBlock.push_back(new store(_expr.type, subPtr, _reg));
+            block initBlock = new block();
+            currentBlock.push_back(new jump(initBlock));
+            currentFn.blocks.add(currentBlock);
 
-        currentBlock = initBlock;
-        newExprInit(it, id + 1, condBlock, subPtr);
+            currentBlock = initBlock;
+            newExprInit(it, id + 1, condBlock, _reg);
+        }
+        else {
+            type.dim--;
+            if (type.primitive())
+                currentBlock.push_back(new store(type, subPtr, new intConst("0")));
+            else currentBlock.push_back(new store(type, subPtr, new nullConst()));
+            currentBlock.push_back(new jump(destination));
+            currentFn.blocks.add(currentBlock);
+        }
     }
     @Override public void visit(NewArrayExprNode it) {
         for (ExprNode expr : it.sizes)
-            if (expr != null) {
-                expr.accept(this);
-                if (expr.addr == null) {
-                    register reg = new register(expr.type, regCnt++);
-                    currentBlock.push_back(new alloca(reg));
-                    currentBlock.push_back(new store(expr.type, reg, expr.val));
-                    expr.addr = reg;
-                }
-            }
+            if (expr != null) expr.accept(this);
         register reg = new register(it.type, regCnt++);
+        FnExprNode expr = new FnExprNode(null, "builtin.new.array");
+        expr.type = new Type(it.type);
+        expr.params.add(it.sizes.get(0));
+        currentBlock.push_back(new call(reg, null, expr));
         it.val = reg;
-        currentBlock.push_back(new malloc(reg, it.type, it.sizes.get(0).val));
-        block destination = new block(regCnt++), initBlock = new block(regCnt++);
+        block destination = new block(), initBlock = new block();
         currentBlock.push_back(new jump(initBlock));
         currentFn.blocks.add(currentBlock);
 

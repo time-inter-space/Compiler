@@ -7,6 +7,7 @@ import java.util.ArrayList;
 public class FnExprNode extends ExprNode {
     public String fnName;
     public ArrayList<ExprNode> params = new ArrayList<>();
+    public boolean inClass = false;
 
     public FnExprNode(position pos, String fnName) {
         super(pos);

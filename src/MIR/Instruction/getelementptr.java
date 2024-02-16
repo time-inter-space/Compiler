@@ -11,18 +11,21 @@ public class getelementptr extends statement {
     public IRType type;
     public entity obj;
     public entity num;
-    public getelementptr(register lhs, Type type, entity obj, entity num) {
+    public boolean isDotExpr;
+    public getelementptr(register lhs, Type type, entity obj, entity num, boolean isDotExpr) {
         this.lhs = lhs;
         this.type = new IRType(type);
         this.obj = obj;
         this.num = num;
+        this.isDotExpr = isDotExpr;
     }
     @Override public void print(PrintStream out) {
         lhs.print(out);
         out.print(" = getelementptr ");
-        type.print(out);
+        out.print(type.className);
         out.print(", ptr ");
         obj.print(out);
+        if (isDotExpr) out.print(", i32 0");
         out.print(", i32 ");
         num.print(out);
     }

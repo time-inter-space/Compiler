@@ -11,12 +11,10 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 
 public class block {
-    public String label;
+    public String label = null;
     public LinkedList<statement> stmts = new LinkedList<>();
     public terminalStmt tailStmt = null;
-    public block(int blockCnt) {
-        label = String.valueOf(blockCnt);
-    }
+    public block() {}
     public void push_back(statement stmt) {
         stmts.add(stmt);
         if (stmt instanceof terminalStmt) {
@@ -27,8 +25,8 @@ public class block {
     }
     public void load_store(Type type, entity lhs, entity rhs, int regCnt) {
         register reg = new register(type, regCnt);
-        push_back(new load(type, reg, rhs));
-        push_back(new store(type, reg, lhs));
+        push_back(new load(type, rhs, reg));
+        push_back(new store(type, lhs, reg));
     }
     public ArrayList<block> successors() {
         ArrayList<block> ret = new ArrayList<>();

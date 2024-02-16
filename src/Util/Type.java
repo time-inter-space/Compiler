@@ -10,7 +10,7 @@ public class Type {
     public int dim = 0;
     public boolean hasConstructor = false;
     public HashMap<String, String> memberVars = new HashMap<>();
-    public HashMap<String, FnDefNode> memberFns = new HashMap<>();;
+    public HashMap<String, FnDefNode> memberFns = new HashMap<>();
 
     public Type(String name) {
         boolean isName = true;

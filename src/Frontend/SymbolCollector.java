@@ -22,13 +22,17 @@ public class SymbolCollector implements ASTVisitor {
     }
     @Override public void visit(ClassDefNode it) {
         Type cls = new Type(it.className);
+        int irSize = 0;
         cls.memberVars = new HashMap<>();
         for (VarDefStmtNode vd : it.varDefs) {
-            vd.vars.forEach(var -> cls.addVar(var, vd.type, vd.pos));
+            for (String var : vd.vars) {
+                cls.addVar(var, vd.type, vd.pos);
+                irSize += 4;
+            }
         }
         if (it.constructor != null) cls.hasConstructor = true;
         it.fns.forEach(fd -> cls.addFn(fd.fnName, fd, fd.pos));
-        gScope.addType(it.className, cls, it.pos);
+        gScope.addType(it.className, cls, irSize, it.pos);
     }
     
     @Override public void visit(VarDefStmtNode it) {}

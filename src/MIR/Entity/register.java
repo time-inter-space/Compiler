@@ -13,6 +13,6 @@ public class register extends entity {
         num = regCnt;
     }
     @Override public void print(PrintStream out) {
-        out.print("%" + String.valueOf(num));
+        out.print("%v.reg." + String.valueOf(num));
     }
 }

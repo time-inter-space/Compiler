@@ -17,11 +17,11 @@ public class classDef {
         vars.add(new IRType(type));
     }
     public void print(PrintStream out) {
-        out.print("%" + className + " = type { ");
+        out.print("%class." + className + " = type <{ ");
         for (int i = 0; i < vars.size(); i++) {
             if (i > 0) out.print(", ");
             vars.get(i).print(out);
         }
-        out.println(" }");
+        out.println(" }>");
     }
 }

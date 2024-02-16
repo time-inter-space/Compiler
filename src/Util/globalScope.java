@@ -8,6 +8,7 @@ import java.util.HashMap;
 
 public class globalScope extends Scope {
     public HashMap<String, Type> types = new HashMap<>();
+    public HashMap<String, Integer> irSizes = new HashMap<>();
     public HashMap<String, FnDefNode> fns = new HashMap<>();
     public HashMap<String, classDef> irTypes = new HashMap<>();
     public globalScope(Scope parentScope, globalScope gScope) {
@@ -66,12 +67,13 @@ public class globalScope extends Scope {
         fn.params.add(pa);
         fns.put("toString", fn);
     }
-    public void addType(String name, Type t, position pos) {
+    public void addType(String name, Type t, int irSize, position pos) {
         if (name.equals("main") || fns.containsKey(name))
             throw new semanticError("duplicate name for function name and class name", pos);
         if (types.containsKey(name))
             throw new semanticError("multiple definition of " + name, pos);
         types.put(name, t);
+        irSizes.put(name, irSize);
     }
     public Type getTypeFromName(String name, position pos) {
         Type type = new Type(name);
