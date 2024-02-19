@@ -1,4 +1,6 @@
 testcases/
 src/org/
 output.ll
+output.s
 test.mx
+llvm.sh

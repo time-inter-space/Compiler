@@ -30,4 +30,7 @@ public class select extends statement {
         out.print(" ");
         val2.print(out);
     }
+    @Override public void accept(IRVisitor visitor) {
+        visitor.visit(this);
+    }
 }

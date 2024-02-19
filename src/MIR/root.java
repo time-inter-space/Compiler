@@ -39,4 +39,7 @@ public class root {
         vars.forEach(var -> var.printDef(out));
         fns.forEach(fn -> fn.print(out));
     }
+    public void accept(IRVisitor visitor) {
+        visitor.visit(this);
+    }
 }

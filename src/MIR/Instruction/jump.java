@@ -12,4 +12,7 @@ public class jump extends terminalStmt {
     @Override public void print(PrintStream out) {
         out.print("br label %" + destination.label);
     }
+    @Override public void accept(IRVisitor visitor) {
+        visitor.visit(this);
+    }
 }

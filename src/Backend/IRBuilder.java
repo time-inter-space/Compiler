@@ -62,12 +62,15 @@ public class IRBuilder implements ASTVisitor {
         currentBlock = new block();
         if (currentClass != null) {
             localVar var = new localVar(currentClassType, "this." + getVarCnt("this"));
-            currentScope.entities.put("this", var);
             currentFn.params.add(var);
+            localVar tmpVar = new localVar(currentClassType, "this." + getVarCnt("this"));
+            currentBlock.push_back(new alloca(tmpVar));
+            currentBlock.push_back(new store(currentClassType, tmpVar, var));
+            currentScope.entities.put("this", tmpVar);
             AtomExprNode thisExpr = new AtomExprNode(null);
             thisExpr.isThis = true;
             thisExpr.type = currentClassType;
-            thisExpr.val = var;
+            thisExpr.addr = tmpVar;
             currentObj = thisExpr;
         }
         it.params.forEach(param -> param.accept(this));
@@ -124,7 +127,11 @@ public class IRBuilder implements ASTVisitor {
         else reg = new register(it.type, regCnt++);
         it.val = reg;
         ExprNode dotObj = null;
-        if (it.inClass) dotObj = currentObj;
+        if (it.inClass) {
+            dotObj = currentObj;
+            dotObj.val = new register(currentClassType, regCnt++);
+            currentBlock.push_back(new load(currentClassType, dotObj.addr, dotObj.val));
+        }
         currentBlock.push_back(new call(reg, dotObj, it));
     }
 
@@ -341,7 +348,9 @@ public class IRBuilder implements ASTVisitor {
         if (it.iden != null) {
             it.addr = currentScope.getEntity(it.iden, true);
             if (it.addr == null) {
-                entity obj = currentScope.getEntity("this", true);
+                entity objAddr = currentScope.getEntity("this", true);
+                register obj = new register(currentClassType, regCnt++);
+                currentBlock.push_back(new load(currentClassType, objAddr, obj));
                 register reg = new register(it.type, regCnt++);
                 intConst num = new intConst(String.valueOf(
                     currentClass.varNum.get(it.iden)));
@@ -362,7 +371,11 @@ public class IRBuilder implements ASTVisitor {
         else if (it.isTrue) it.val = new intConst("1");
         else if (it.isFalse) it.val = new intConst("0");
         else if (it.isNull) it.val = new nullConst();
-        else it.val = currentScope.getEntity("this", true);
+        else {
+            it.addr = currentScope.getEntity("this", true);
+            it.val = new register(it.type, regCnt++);
+            currentBlock.push_back(new load(it.type, it.addr, it.val));
+        }
     }
     
     @Override public void visit(BinaryExprNode it) {
@@ -500,26 +513,35 @@ public class IRBuilder implements ASTVisitor {
         it.expr1.accept(this);
         block block2 = new block(), block3 = new block();
         block destination = new block();
+        register res = null;
+        if (!it.type.isVoid()) {
+            res = new register(it.type, regCnt++);
+            currentBlock.push_back(new alloca(res));
+        }
         currentBlock.push_back(new br(it.expr1.val, block2, block3));
         currentFn.blocks.add(currentBlock);
 
         currentBlock = block2;
         it.expr2.accept(this);
+        if (!it.expr2.type.isVoid())
+            currentBlock.push_back(new store(it.expr2.type, res, it.expr2.val));
         currentBlock.push_back(new jump(destination));
         currentFn.blocks.add(currentBlock);
 
         currentBlock = block3;
         it.expr3.accept(this);
+        if (!it.expr3.type.isVoid())
+            currentBlock.push_back(new store(it.expr3.type, res, it.expr3.val));
         currentBlock.push_back(new jump(destination));
         currentFn.blocks.add(currentBlock);
 
         currentBlock = destination;
-        register reg;
-        if (it.type.isVoid()) reg = null;
-        else {
+        register reg = null;
+        if (!it.type.isVoid()) {
             reg = new register(it.type, regCnt++);
-            currentBlock.push_back(new select(
-                it.type, reg, it.expr1.val, it.expr2.val, it.expr3.val));
+            currentBlock.push_back(new load(it.type, res, reg));
+            // currentBlock.push_back(new select(
+            //     it.type, reg, it.expr1.val, it.expr2.val, it.expr3.val));
         }
         it.val = reg;
     }

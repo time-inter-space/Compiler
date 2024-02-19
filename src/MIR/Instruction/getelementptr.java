@@ -29,4 +29,7 @@ public class getelementptr extends statement {
         out.print(", i32 ");
         num.print(out);
     }
+    @Override public void accept(IRVisitor visitor) {
+        visitor.visit(this);
+    }
 }

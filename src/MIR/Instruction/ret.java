@@ -20,4 +20,7 @@ public class ret extends terminalStmt {
             val.print(out);
         }
     }
+    @Override public void accept(IRVisitor visitor) {
+        visitor.visit(this);
+    }
 }

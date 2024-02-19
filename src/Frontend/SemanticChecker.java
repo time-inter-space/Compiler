@@ -1,7 +1,5 @@
 package Frontend;
 
-import javax.lang.model.util.ElementScanner14;
-
 import AST.*;
 import Util.Scope;
 import Util.Type;

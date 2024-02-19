@@ -19,4 +19,7 @@ public class br extends terminalStmt {
         cond.print(out);
         out.print(", label %" + trueBlock.label + ", label %" + falseBlock.label);
     }
+    @Override public void accept(IRVisitor visitor) {
+        visitor.visit(this);
+    }
 }

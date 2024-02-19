@@ -5,13 +5,13 @@ import java.io.PrintStream;
 import Util.Type;
 
 public class globalVar extends variable {
-    String strConst = null;
-    int len = 0;
+    public String strConst = null;
+    public int len = 0;
     public globalVar(Type type, String name) {
         super(type, name);
     }
     public globalVar(Type type, String str, int strConstCnt) {
-        super(type, "string." + strConstCnt);
+        super(type, ".str." + strConstCnt);
         strConst = str.substring(1, str.length() - 1);
         len = strConst.replace("\\n", "0").replace("\\\"", "1").replace("\\\\", "2").length();
     }

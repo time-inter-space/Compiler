@@ -2,6 +2,7 @@ package MIR.Instruction;
 
 import java.io.PrintStream;
 
+import MIR.*;
 import MIR.Entity.*;
 
 public class alloca extends statement {
@@ -13,5 +14,8 @@ public class alloca extends statement {
         lhs.print(out);
         out.print(" = alloca ");
         lhs.type.print(out);
+    }
+    @Override public void accept(IRVisitor visitor) {
+        visitor.visit(this);
     }
 }

@@ -3,7 +3,6 @@ package Frontend;
 import AST.*;
 import Util.Type;
 import Util.globalScope;
-import Util.error.semanticError;
 
 import java.util.HashMap;
 

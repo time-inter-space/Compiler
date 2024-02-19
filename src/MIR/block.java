@@ -47,4 +47,7 @@ public class block {
             out.println("");
         }
     }
+    public void accept(IRVisitor visitor) {
+        visitor.visit(this);
+    }
 }

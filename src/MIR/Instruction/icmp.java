@@ -27,4 +27,7 @@ public class icmp extends statement {
         out.print(", ");
         op2.print(out);
     }
+    @Override public void accept(IRVisitor visitor) {
+        visitor.visit(this);
+    }
 }

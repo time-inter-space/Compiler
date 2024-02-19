@@ -5,8 +5,6 @@ import parser.*;
 import parser.MxParser.FuncDefContext;
 import Util.*;
 import Util.error.semanticError;
-import Util.error.syntaxError;
-import java.util.List;
 
 public class ASTBuilder extends MxBaseVisitor<ASTNode> {
     private globalScope gScope;
